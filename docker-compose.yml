@@ -20,17 +20,17 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__CORE__FERNET__KEY=D_b7-k2tJcEmrfAPASL8V_cY03LJd-uWWtJ-8HN1Esk=
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
-      # usuario por defecto
-      - _AIRFLOW_WWW_USER_CREATE=true
-      - _AIRFLOW_WWW_USER_USERNAME=admin
-      - _AIRFLOW_WWW_USER_PASSWORD=admin
+      # # usuario por defecto
+      # - _AIRFLOW_WWW_USER_CREATE=true
+      # - _AIRFLOW_WWW_USER_USERNAME=admin
+      # - _AIRFLOW_WWW_USER_PASSWORD=admin
       # # para que todas las carpetas de src/ sean importables
       # - PYTHONPATH=/opt/airflow/src
 
     volumes: #Los volumenes de airflow los tiene este repo. /data se busca en el repo control
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
-      - ../control/data:/opt/airflow/data
+      - ../egi-control/data:/opt/airflow/data
       - ./volumes/airflow:/opt/airflow
     
     ports:
@@ -53,7 +53,7 @@ services:
     volumes: #Los volumenes de airflow los tiene este repo. /data se busca en el repo control
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
-      - ../control/data:/opt/airflow/data
+      - ../egi-control/data:/opt/airflow/data
       - ./volumes/airflow:/opt/airflow
     environment:
       - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
