@@ -1,1 +1,0 @@
-# Notifica si el modelo degrada su rendimiento

@@ -9,8 +9,8 @@ services:
   airflow:
   # En caso de falta de contraseña (ver al iniciar sesión en la pagina autohosteada) abrir terminal de contenedor airflow, abrir archivo config y buscar "password": docker ps, docker exec -it <nombre_del_contenedor> bash, /opt/airflow/airflow.cfg, cat /opt/airflow/airflow.cfg
   
-    build:
-      context: matiascollado/airflow-w-sklearn:v1.0    # <-- Aquí apunta al Docker Hub
+    # build:
+    #   context: ./airflow-w-sklearn    # <-- Aquí apunta al Dockerfile de la carpeta dedicada
     # image: apache/airflow:2.9.2
     image: matiascollado/airflow-w-sklearn:v1.0
     # image: airflow-w-sklearn
@@ -27,81 +27,37 @@ services:
       # # para que todas las carpetas de src/ sean importables
       # - PYTHONPATH=/opt/airflow/src
 
-    volumes:
+    volumes: #Los volumenes de airflow los tiene este repo. /data se busca en el repo control
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
-      - ./data:/opt/airflow/data
+      - ../control/data:/opt/airflow/data
       - ./volumes/airflow:/opt/airflow
     
-    # ports:
-    #   - "8080:8080"
+    ports:
+      - "8080:8080"
     # command: standalone
     command: >
       bash -c "airflow db init &&
-                airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
                 airflow webserver"
 
 
   airflow-scheduler:
-    build:
-      context: matiascollado/airflow-w-sklearn:v1.0    # <-- Aquí apunta al Docker Hub
-    image: airflow-w-sklearn
+    # build:
+    #   context: ./airflow-w-sklearn    # <-- Aquí apunta al Dockerfile de la carpeta dedicada
+    image: matiascollado/airflow-w-sklearn:v1.0
+    # image: airflow-w-sklearn
     container_name: airflow-scheduler
-    command: airflow scheduler
+    command: airflow scheduler 
     depends_on:
       - airflow
-    volumes:
+    volumes: #Los volumenes de airflow los tiene este repo. /data se busca en el repo control
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
-      - ./data:/opt/airflow/data
+      - ../control/data:/opt/airflow/data
       - ./volumes/airflow:/opt/airflow
     environment:
       - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
 
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:22.0.5
-    container_name: keycloak
-    environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - DB_VENDOR=h2
-    volumes:
-      - ./volumes/keycloak:/opt/keycloak/data
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
-    ports:
-      - "8081:8080"
-    command:
-      - start-dev
-      - --import-realm
-
-
-  oauth2-proxy:
-    image: bitnami/oauth2-proxy:latest
-    container_name: oauth2-proxy
-    environment:
-      - OAUTH2_PROXY_CLIENT_ID=frontend-client
-      - OAUTH2_PROXY_CLIENT_SECRET=ZUA1nSULKbOUVSczgFnlN4kKwK7m9YaV
-      - OAUTH2_PROXY_COOKIE_SECRET=abcdef1234567890abcdef1234567890
-      - OAUTH2_PROXY_PROVIDER=oidc
-      - OAUTH2_PROXY_OIDC_ISSUER_URL=http://keycloak:8080/realms/ML
-      - OAUTH2_PROXY_EMAIL_DOMAINS=*
-      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
-      # - OAUTH2_PROXY_UPSTREAM=http://frontend:3000
-      - OAUTH2_PROXY_UPSTREAM=http://panel-app:5000/panel/, http://frontend:3000/frontend/
-      - OAUTH2_PROXY_REDIRECT_URL=http://localhost:4180/oauth2/callback
-    ports:
-     - "4180:4180"
-
-  # airflow-init:
-  #   image: apache/airflow:2.9.2
-  #   command: /bin/bash -c "pip install --no-cache-dir -r /requirements.txt"
-  #   volumes:
-  #     - .:/requirements.txt:/requirements.txt
-  #   environment:
-  #     - AIRFLOW__CORE__LOAD_EXAMPLES=false
-
-    # docker-compose.yml
 
   mysql-server:
     image: mysql:8.0
@@ -111,35 +67,10 @@ services:
       MYSQL_DATABASE: students
       MYSQL_USER: user
       MYSQL_PASSWORD: 1234
-    ports:
-      - "3306:3306" # Opcional: solo si necesitas acceder desde fuera del contenedor
+    # ports:
+    #   - "3306:3306" # Opcional: solo si necesitas acceder desde fuera del contenedor
     volumes:
       - .volumes/mysql_data:/var/lib/mysql
       - .volumes/mysql_data/init.sql:/docker-entrypoint-initdb.d/init.sql  # script inicial (opcional)
     networks:
       - internal_network
-
-  panel-app:
-    build:
-      context: ./visualization
-    container_name: panel-app
-    # ports:
-    #   - "5000:5000"
-    volumes:
-      - ./data:/opt/airflow/data  # Compartimos los datos con la app
-      - ./visualization:/app  # Compartimos la app con el contenedor
-
-  frontend:
-    build:
-      context: ./frontend
-    container_name: frontend-app
-    # ports:
-    #   - "3000:3000"
-    networks:
-      - internal_network
-    environment:
-    - FLASK_ENV=development
-    volumes:
-    - ./frontend:/app
-    depends_on:
-      - keycloak

@@ -1,40 +1,99 @@
-# Archivos de configuración sensibles
-oauth2-proxy.cfg
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Airflow logs and temp files
+logs/
+*.log
+.airflowignore
+airflow.cfg
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Docker local config files
+docker-compose.override.yml
+.dockerignore
+
+# VSCode settings
+.vscode/
+
+# PyCharm
+.idea/
+
+# Editor swap files
+*.swp
+*~
+
+# dotenv environment variables file
 .env
 
-# Claves y certificados
-*.pem
-*.key
-*.crt
-
-# Archivos de Python
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-*.db
+# Logs and databases
 *.sqlite3
+*.db
 
-# Entornos virtuales
-venv/
-env/
-virtualenv/
+# Coverage reports
+.coverage
+.coverage.*
+.cache
 
-# Logs y archivos temporales
-*.log
-*.tmp
-*.swp
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
 
-# Configuraciones locales
-/.idea
-/.vscode
-/.DS_Store
-
-# Carpetas generadas por Docker
-/volumes
-
-# Archivos de Airflow
-/airflow/__pycache__
-
-# Panel cache
-.panel-server
+# macOS files
+.DS_Store

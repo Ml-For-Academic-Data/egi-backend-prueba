@@ -1,9 +1,0 @@
-pandas
-panel
-holoviews
-bokeh
-hvplot
-plotly
-scikit-learn
-seaborn
-numpy
