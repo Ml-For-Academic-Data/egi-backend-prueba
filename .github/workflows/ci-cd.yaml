@@ -1,0 +1,158 @@
+# Nombre del pipeline que aparecerá en la pestaña "Actions" de GitHub.
+name: Pipeline de CI/CD para el Backend (Airflow)
+
+# 'on' define los eventos que dispararán este pipeline.
+on:
+  # Se activa cuando se hace un 'push' (se sube código) a la rama 'main'.
+  push:
+    branches: [ main ]
+  # También se activa cuando se crea o actualiza un 'Pull Request' que apunta a 'main'.
+  pull_request:
+    branches: [ main ]
+
+# 'env' define variables de entorno que estarán disponibles para todos los trabajos del pipeline.
+env:
+  # El registry donde publicaremos nuestras imágenes. Para GitHub, es ghcr.io.
+  REGISTRY: ghcr.io
+  # El nombre de la imagen. Lo definimos explícitamente para que sea consistente,
+  # sin importar si el pipeline se ejecuta en el repo de prueba o en el final.
+  # ${{ github.repository_owner }} se convierte en 'Ml-For-Academic-Data'.
+  IMAGE_NAME: ${{ github.repository_owner }}/egi-backend
+
+# 'jobs' define la secuencia de trabajos que se ejecutarán.
+jobs:
+  # -----------------------------------------------------------------
+  # TRABAJO 1: PRUEBAS Y VALIDACIÓN (INTEGRACIÓN CONTINUA - CI)
+  # Este trabajo se ejecuta SIEMPRE, tanto en Pull Requests como en pushes a main.
+  # -----------------------------------------------------------------
+  test:
+    # Nombre descriptivo del trabajo.
+    name: Pruebas y Calidad de Código
+    # El tipo de máquina virtual que usaremos. 'ubuntu-latest' es la estándar.
+    runs-on: ubuntu-latest
+
+    # 'steps' son los comandos individuales que se ejecutarán en este trabajo.
+    steps:
+      # Paso 1: Descargar el código del repositorio a la máquina virtual.
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar el entorno de Python en la versión que necesitamos.
+      - name: Configurar Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # Paso 3: Instalar las dependencias de Python.
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # Instalamos las herramientas de testing aquí para no incluirlas en la imagen final.
+          pip install flake8 pytest
+
+      # Paso 4: Validar la calidad del código con un linter (flake8).
+      - name: Linting con Flake8
+        run: |
+          # Revisa el código buscando errores de estilo y errores comunes.
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # (Opcional) Paso 5: Ejecutar pruebas unitarias.
+      # - name: Ejecutar Pruebas con Pytest
+      #   run: |
+      #     pytest
+
+  # -----------------------------------------------------------------
+  # TRABAJO 2: CONSTRUIR Y PUBLICAR LA IMAGEN (DESPLIEGUE CONTINUO - CD)
+  # Este trabajo depende del anterior y solo se ejecuta en 'push' a 'main'.
+  # -----------------------------------------------------------------
+  build-and-push:
+    name: Construir y Publicar Imagen Docker
+    # 'needs: test' significa que este trabajo no empezará hasta que el trabajo 'test' termine con éxito.
+    needs: test
+    # 'if' es una condición: solo ejecuta este trabajo si el evento fue un 'push' a la rama 'main'.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    # 'permissions' le da permisos especiales a este trabajo.
+    permissions:
+      contents: read      # Permiso para leer el contenido del repositorio.
+      packages: write    # Permiso para escribir (publicar) paquetes en el GitHub Container Registry.
+
+    # 'outputs' permite pasar información de este trabajo al siguiente.
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Iniciar sesión en GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN es un secreto que GitHub provee automáticamente para esta autenticación.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extraer metadata (etiquetas) para la imagen
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Genera una etiqueta única para la imagen usando el hash corto del commit.
+          # ej: ghcr.io/ml-for-academic-data/egi-backend:a1b2c3d
+          tags: type=sha,prefix=,format=short
+
+      - name: Construir y publicar la imagen de Docker
+        id: build_and_push
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Usa el Dockerfile en la raíz del proyecto.
+          push: true # Le dice a la acción que publique la imagen.
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # -----------------------------------------------------------------
+  # TRABAJO 3: ACTUALIZAR EL REPOSITORIO DE INFRAESTRUCTURA (GITOPS)
+  # El último paso: informa a Argo CD que hay una nueva imagen.
+  # -----------------------------------------------------------------
+  update-manifest:
+    name: Actualizar Manifiesto de Infraestructura
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Descargar el código del OTRO repositorio (el de infraestructura).
+      - name: Checkout del repositorio de infraestructura
+        uses: actions/checkout@v4
+        with:
+          repository: Ml-For-Academic-Data/egi-infrastructure-k8s
+          # Usamos un token de acceso personal para poder hacer 'push' a este repo.
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+
+      # Paso 2: Actualizar el archivo de configuración de Helm (values.yaml).
+      - name: Actualizar el tag de la imagen en values.yaml
+        run: |
+          # Obtenemos el tag completo de la imagen del trabajo anterior.
+          # ej: ghcr.io/ml-for-academic-data/egi-backend:a1b2c3d
+          FULL_IMAGE_TAG=${{ needs.build-and-push.outputs.tags }}
+          # Extraemos solo la parte de la etiqueta (el hash del commit).
+          IMAGE_TAG_ONLY=${FULL_IMAGE_TAG##*:}
+
+          echo "Actualizando a la nueva etiqueta: ${IMAGE_TAG_ONLY}"
+          
+          # Modificamos el archivo. Esto asume que tienes un archivo values.yaml
+          # en 'charts/backend/values.yaml' con una estructura como:
+          # image:
+          #   tag: 'old-tag'
+          # Usaremos 'sed', una herramienta de línea de comandos, para reemplazar el tag.
+          sed -i "s|tag:.*|tag: '"${IMAGE_TAG_ONLY}"'|g" charts/backend/values.yaml
+
+      # Paso 3: Hacer commit y push con los cambios al repo de infra.
+      - name: Hacer Commit y Push de los cambios
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'github-actions-bot@github.com'
+          # Solo hacemos commit y push si realmente hubo un cambio en el archivo.
+          git diff --quiet || (git add charts/backend/values.yaml && git commit -m "ci(backend): Actualiza imagen a ${{ github.sha }}" && git push)
