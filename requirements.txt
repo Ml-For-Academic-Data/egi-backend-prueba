@@ -1,0 +1,17 @@
+# ====== Core de Orquestación ======
+# Se necesita para que los DAGs puedan ser ejecutados por Airflow.
+apache-airflow==2.9.2
+
+# ====== Manipulación y Análisis de Datos ======
+# Usado extensivamente para leer CSVs, limpiar datos, y manipular DataFrames.
+pandas
+
+# Dependencia fundamental para operaciones numéricas en pandas y scikit-learn.
+numpy
+
+# Necesario para el futuro entrenamiento del modelo y tareas de ML.
+scikit-learn
+
+# ====== Conexión a Base de Datos (Opcional pero Recomendado) ======
+# Si en el futuro tus DAGs necesitan interactuar con la base de datos MySQL.
+apache-airflow-providers-mysql
