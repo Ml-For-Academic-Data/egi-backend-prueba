@@ -1,23 +1,25 @@
 # Dockerfile optimizado para producción
-
-# Usamos la imagen oficial de Airflow 2.9.2 como nuestra base.
-# Esta imagen ya viene con todo lo necesario para correr Airflow.
 FROM apache/airflow:2.9.2
 
-# Es una buena práctica de seguridad no correr contenedores como root.
-# Nos aseguramos de operar como el usuario 'airflow' que ya viene en la imagen.
+# Cambiar temporalmente a root para instalar dependencias del sistema
+USER root
+
+# Instalar dependencias del sistema necesarias para mysqlclient
+RUN apt-get update && apt-get install -y \
+    default-libmysqlclient-dev \
+    pkg-config \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Volver al usuario airflow
 USER airflow
 
-# Copiamos nuestro archivo de requerimientos, que ahora contiene TODAS
-# las dependencias de Python necesarias para el proyecto.
+# Copiamos nuestro archivo de requerimientos
 COPY requirements.txt /
 
-# Ejecutamos UN SOLO comando 'pip install' para instalar todas las dependencias
-# de la lista. Esto es más eficiente y limpio que tener varios 'RUN'.
-# La opción --no-cache-dir crea una instalación más ligera.
+# Instalamos las dependencias de Python
 RUN pip install --no-cache-dir -r /requirements.txt
 
-# Finalmente, copiamos nuestro código personalizado (DAGs y posibles utilidades)
-# a las carpetas correctas que Airflow espera para poder ejecutarlos.
+# Copiamos el código
 COPY dags /opt/airflow/dags
 COPY src /opt/airflow/src
