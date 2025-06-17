@@ -1,33 +1,22 @@
 # ====== Core de Orquestación ======
-# El motor principal para ejecutar los DAGs.
 apache-airflow==2.9.2
 
 # ====== Machine Learning y Análisis de Datos ======
-# La librería principal para entrenar y gestionar modelos.
 scikit-learn
-# Usado extensivamente para leer CSVs, limpiar datos y manipular DataFrames.
 pandas
-# Dependencia fundamental para operaciones numéricas y álgebra lineal.
 numpy
-# Utilizado a menudo por scikit-learn para guardar y cargar modelos.
 joblib
 
 # ====== Visualización de Datos ======
-# Librerías para generar gráficos y reportes visuales si fuera necesario.
 matplotlib
 seaborn
 
 # ====== Conectividad y Proveedores de Airflow ======
-# Para hacer llamadas a APIs externas desde los DAGs.
 apache-airflow-providers-http
-# Le dice a Airflow CÓMO hablar con MySQL.
 apache-airflow-providers-mysql
 
-# --- LA PIEZA CLAVE QUE FALTABA ---
-# El "adaptador" o driver de bajo nivel que permite a Python
-# establecer la conexión con la base de datos MySQL.
-mysqlclient
+# --- CAMBIO AQUÍ: usar PyMySQL en lugar de mysqlclient ---
+PyMySQL
 
 # ====== Utilidades Generales ======
-# Librería estándar para hacer peticiones HTTP (ej: a APIs).
 requests
