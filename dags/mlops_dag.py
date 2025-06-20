@@ -12,7 +12,8 @@ if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
 
 # Definición de rutas globales
-RAW_DATA_PATH = "/opt/airflow/data/raw/dataset.csv"
+# Montamos EFS en /opt/airflow/data, y el repo se clona en /repo-datos dentro de esa montura
+RAW_DATA_PATH = "/opt/airflow/data/repo-datos/data/raw/dataset.csv" 
 TEMP_DIR = "/opt/airflow/data/temp"
 PROCESSED_DIR = "/opt/airflow/data/processed"
 
